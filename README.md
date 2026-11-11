@@ -17,6 +17,16 @@ node server.js 4185
 
 Open <http://localhost:4185>. The server binds to loopback for local use. It does not publish the site to the internet.
 
+## Sample gallery content
+
+The SQLite database is intentionally separate from Git. To add the clearly labeled preview collection to a fresh local database, start the server once so it creates the schema, stop it, then run:
+
+```powershell
+node seed-sample-data.js
+```
+
+The seed is idempotent and adds 10 sample works, six sample artists, 3 sample events dated in 2027, three sample exhibitions, and an ALU directory entry plus three sample partner institutions. The sample accounts are non-login demo records and are excluded from account management and registered-user totals. Sample images and profiles are labeled as previews; replace them with approved ALU and artist content before presenting the site as an official collection or event calendar. The gallery includes 15 disciplines in its artwork upload and filter controls.
+
 ## First gallery administrator
 
 Set a one-time setup key before starting the server:
