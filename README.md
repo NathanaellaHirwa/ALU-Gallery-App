@@ -12,10 +12,10 @@ Responsive gallery and collaboration application for ALU and partner institution
 In PowerShell, from this folder:
 
 ```powershell
-node server.js 4178
+node server.js 4185
 ```
 
-Open <http://localhost:4178>. The server binds to loopback for local use. It does not publish the site to the internet.
+Open <http://localhost:4185>. The server binds to loopback for local use. It does not publish the site to the internet.
 
 ## First gallery administrator
 
@@ -35,6 +35,6 @@ Artists can register through the app. Institution administrators can request acc
 - **Email provider credentials** for email verification, password recovery, and outbound notifications. Those flows are not active without an email integration.
 - **Hosted runtime, HTTPS, and persistent storage** before partner users can access the same service online. The server currently binds to `127.0.0.1`.
 - The report screen exports Excel-readable CSV; use the browser print dialog to save a PDF. Native XLSX/PDF generation is not configured.
-- Artwork editing/deletion, exhibition participant and curator assignment, event participant exports, file attachments, notification preferences, profile photos, and automated database backups are not implemented yet.
+- Artwork details can be edited and artwork can be removed by its owner or an administrator. Exhibition participant and curator assignment, event participant exports, file attachments, notification preferences, profile photos, and automated database backups are not implemented yet.
 
 This repository contains the application code. Do not commit `.env` files, the local database, or uploaded artwork.
