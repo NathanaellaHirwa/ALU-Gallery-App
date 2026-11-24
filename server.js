@@ -104,6 +104,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id,read_at,created_at);
 `);
 
+if(process.env.ALU_AUTO_SEED==='1'){try{console.log(require('./seed-sample-data.js').installSample(db));}catch(err){console.error('Sample content could not be installed:',err.message);}}
 const statements = {
   userByEmail: db.prepare('SELECT * FROM users WHERE email = ?'),
   userById: db.prepare('SELECT id,email,full_name,role,institution_id,status FROM users WHERE id = ?'),
@@ -112,6 +113,7 @@ const statements = {
   session: db.prepare('SELECT u.id,u.email,u.full_name,u.role,u.institution_id,u.status,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?'),
   log: db.prepare('INSERT INTO activity_logs(actor_id,action,record_type,record_id,details) VALUES(?,?,?,?,?)'),
 };
+if(!statements.activeAdmins.get().n&&process.env.ALU_ADMIN_EMAIL&&String(process.env.ALU_ADMIN_PASSWORD||'').length>=12){const salt=crypto.randomBytes(16).toString('hex'),pw=crypto.scryptSync(process.env.ALU_ADMIN_PASSWORD,salt,64).toString('hex');try{db.prepare("INSERT INTO users(email,full_name,password_salt,password_hash,role,status) VALUES(?,?,?,?,'gallery_admin','active')").run(process.env.ALU_ADMIN_EMAIL.trim().toLowerCase(),process.env.ALU_ADMIN_NAME||'Gallery Admin',salt,pw);console.log('Gallery administrator created from environment settings.');}catch(err){console.error('Administrator could not be created:',err.message);}}
 const loginAttempts=new Map();
 const roles = new Set(['artist','institution_admin','gallery_admin']);
 const publicUser = u => ({ id:u.id, email:u.email, fullName:u.full_name, role:u.role, institutionId:u.institution_id, status:u.status });

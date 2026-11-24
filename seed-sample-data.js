@@ -1,18 +1,9 @@
 // Adds clearly labeled preview content to an initialized ALU Gallery database.
 // Run once with: node seed-sample-data.js
+// The server can also call installSample(db) on start when ALU_AUTO_SEED=1.
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
-
-const dataDir = path.resolve(process.env.ALU_DATA_DIR || path.join(__dirname, 'data'));
-const db = new DatabaseSync(path.join(dataDir, 'alu-gallery.sqlite'));
-db.exec('PRAGMA foreign_keys = ON;');
-db.exec(`CREATE TABLE IF NOT EXISTS seed_metadata (key TEXT PRIMARY KEY, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`);
-if (db.prepare("SELECT 1 FROM seed_metadata WHERE key='sample-content-v1'").get()) {
-  console.log('Sample content is already installed.');
-  db.close();
-  process.exit(0);
-}
 
 const partners = [
   ['African Leadership University', 'University', 'Kigali, Rwanda', 'ALU Gallery host institution.'],
@@ -56,6 +47,8 @@ const exhibitions = [
   ['Sample exhibition · Lines of Connection', 'A sample collaborative exhibition preview for partner institutions.', 'Connection and exchange', '2027-08-01', '2027-10-30', 'ALU Gallery · Sample listing', 'Sample preview exhibition. Replace with approved curatorial details.', 'upcoming'],
 ];
 
+function installSample(db) {
+db.exec('CREATE TABLE IF NOT EXISTS seed_metadata (key TEXT PRIMARY KEY, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);');
 const insertInstitution = db.prepare('INSERT INTO institutions(name,type,location,description,status) VALUES(?,?,?,?,\'approved\') ON CONFLICT(name) DO UPDATE SET type=excluded.type,location=excluded.location,description=excluded.description,status=\'approved\'');
 const insertUser = db.prepare("INSERT INTO users(email,full_name,password_salt,password_hash,role,institution_id,status) VALUES(?,?,?,?, 'artist',?,'demo') ON CONFLICT(email) DO UPDATE SET full_name=excluded.full_name,institution_id=excluded.institution_id,status='demo'");
 const selectUser = db.prepare('SELECT id FROM users WHERE email=?');
@@ -66,6 +59,7 @@ const insertSubmission = db.prepare("INSERT INTO submissions(artwork_id,exhibiti
 const insertEvent = db.prepare("INSERT INTO events(title,description,kind,starts_at,venue,capacity,status,created_by) VALUES(?,?,?,?,?,?, 'registration open',?)");
 const markSeeded = db.prepare("INSERT INTO seed_metadata(key) VALUES('sample-content-v1')");
 
+if (db.prepare("SELECT 1 FROM seed_metadata WHERE key='sample-content-v1'").get()) return 'Sample content is already installed.';
 try {
   db.exec('BEGIN IMMEDIATE;');
   const institutionIds = partners.map(p => {
@@ -93,10 +87,18 @@ try {
   events.forEach(e => insertEvent.run(...e, createdBy));
   markSeeded.run();
   db.exec('COMMIT;');
-  console.log(`Installed ${works.length} sample artworks, ${artists.length} sample artists, ${events.length} sample events, ${exhibitions.length} sample exhibitions, and ${partners.length} partner institutions.`);
+  return `Installed ${works.length} sample artworks, ${artists.length} sample artists, ${events.length} sample events, ${exhibitions.length} sample exhibitions, and ${partners.length} partner institutions.`;
 } catch (error) {
   db.exec('ROLLBACK;');
   throw error;
-} finally {
-  db.close();
+}
+}
+module.exports = { installSample };
+
+if (require.main === module) {
+  const dataDir = path.resolve(process.env.ALU_DATA_DIR || path.join(__dirname, 'data'));
+  const db = new DatabaseSync(path.join(dataDir, 'alu-gallery.sqlite'));
+  db.exec('PRAGMA foreign_keys = ON;');
+  db.exec('CREATE TABLE IF NOT EXISTS seed_metadata (key TEXT PRIMARY KEY, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);');
+  try { console.log(installSample(db)); } finally { db.close(); }
 }
