@@ -197,7 +197,7 @@ const server=http.createServer(async(req,res)=>{
       const d=await body(req,8000),email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'').slice(0,200),u=statements.userByEmail.get(email),salt=u?.password_salt||'alu-gallery-login-check';
       const computed=crypto.scryptSync(password,salt,64),correct=!!u&&crypto.timingSafeEqual(computed,Buffer.from(u.password_hash,'hex'));if(!correct){attempt.count++;attempt.at=Date.now();loginAttempts.set(ip,attempt);return fail(res,401,'Email or password is incorrect.');}loginAttempts.delete(ip);
       if(u.status!=='active'||(u.institution_id&&db.prepare('SELECT status FROM institutions WHERE id=?').get(u.institution_id)?.status!=='approved'&&u.role==='institution_admin'))return fail(res,403,'This account is awaiting administrator approval.');
-      const token=crypto.randomBytes(32).toString('base64url'),expires=Date.now()+7*24*60*60*1000;statements.newSession.run(hash(token),u.id,expires);const secure=req.socket.encrypted?'; Secure':'';return send(res,200,{user:publicUser(u)},{'Set-Cookie':`alu_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${secure}`});
+      const token=crypto.randomBytes(32).toString('base64url'),expires=Date.now()+7*24*60*60*1000;statements.newSession.run(hash(token),u.id,expires);const secure=(req.socket.encrypted||(process.env.ALU_TRUST_PROXY&&req.headers['x-forwarded-proto']==='https'))?'; Secure':'';return send(res,200,{user:publicUser(u)},{'Set-Cookie':`alu_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${secure}`});
     }
     if(req.method==='POST'&&pathname==='/api/logout'){
       const token=cookie(req,'alu_session');if(token)db.prepare('DELETE FROM sessions WHERE token_hash=?').run(hash(token));return send(res,200,{ok:true},{'Set-Cookie':'alu_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});
@@ -312,5 +312,5 @@ const server=http.createServer(async(req,res)=>{
   }catch(err){fail(res,err.status||500,err.status?err.message:'The server could not complete this request.');}
 });
 
-const port=Number(process.argv[2]||4173);
-server.listen(port,'127.0.0.1',()=>console.log(`ALU Gallery listening on http://127.0.0.1:${port}`));
+const port=Number(process.env.PORT||process.argv[2]||4173),host=process.env.HOST||(process.env.PORT?'0.0.0.0':'127.0.0.1');
+server.listen(port,host,()=>console.log(`ALU Gallery listening on http://${host}:${port}`));
